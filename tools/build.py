@@ -6,6 +6,10 @@ Edit the copy and casino data here, never the generated index.html files.
 """
 from urllib.parse import quote
 from pathlib import Path
+import hashlib
+
+# Changes whenever the CSS/JS change, so browsers and Cloudflare fetch the new files
+ASSET_V = hashlib.sha1(Path("css/style.css").read_bytes() + Path("js/script.js").read_bytes()).hexdigest()[:8]
 
 DOMAIN = "https://bigscissors.com.au/"
 BRAND = "Aussie Casinos"
@@ -100,7 +104,7 @@ def head(c, title, desc):
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600&family=Sora:wght@600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="{c.a}css/style.css">
+    <link rel="stylesheet" href="{c.a}css/style.css?v={ASSET_V}">
 {GSC if c.is_home else ""}</head>
 <body>
     <a class="skip-link" href="#main">Skip to content</a>
@@ -184,7 +188,7 @@ def footer(c):
         </div>
     </footer>
 
-    <script src="{c.a}js/script.js" defer></script>
+    <script src="{c.a}js/script.js?v={ASSET_V}" defer></script>
 </body>
 </html>
 '''
