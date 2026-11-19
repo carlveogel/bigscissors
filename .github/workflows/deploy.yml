@@ -24,6 +24,7 @@ jobs:
           rsync -avz --delete \
             --exclude='.git' \
             --exclude='.github' \
+            --exclude='tools' \
             ./ \
             ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}:/var/www/bigscissors.com.au/
 
