@@ -1,0 +1,42 @@
+name: Sync homepage
+
+# Copies https://10onlinecasinos.com/au/online-casinos/ onto the homepage
+# (index.html and en-au/index.html) and deploys when the article has changed.
+on:
+  schedule:
+    - cron: "17 */6 * * *"   # every 6 hours (UTC)
+  workflow_dispatch:          # "Run workflow" button in the Actions tab
+
+permissions:
+  contents: write   # commit the updated copy
+  actions: write    # start the Deploy workflow
+
+concurrency:
+  group: mirror
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Copy the latest article
+        run: python3 tools/mirror.py
+
+      - name: Commit and deploy if it changed
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if [ -z "$(git status --porcelain -- index.html en-au/index.html mirror)" ]; then
+            echo "Article unchanged; nothing to deploy."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898283+github-actions[bot]@users.noreply.github.com"
+          git add -A -- index.html en-au/index.html mirror
+          git commit -m "Sync homepage from 10onlinecasinos.com"
+          git push
+          # Pushes made with the workflow token don't trigger other workflows,
+          # so start the deploy explicitly.
+          gh workflow run deploy.yml --ref main
