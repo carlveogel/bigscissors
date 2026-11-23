@@ -6,8 +6,9 @@ Run from the repo root:  python3 tools/mirror.py
 - Fetches SOURCE and writes it to index.html and en-au/index.html.
 - Downloads every image, font, script and stylesheet the page uses from the
   source site into mirror/ and points the page at those local copies.
-- Keeps the source's canonical, hreflang and page links (the original stays
-  the canonical version), removes the Clarity and c-tracker analytics, and adds
+- Keeps the source's canonical and page links (the original stays
+  the canonical version), sets hreflang en-AU and x-default to the source
+  article, removes the Clarity and c-tracker analytics, and adds
   the bigscissors Search Console verification tag.
 - Removes files in mirror/ the page no longer uses.
 
@@ -28,6 +29,7 @@ SOURCE = "https://10onlinecasinos.com/au/online-casinos/"
 SITE = "https://bigscissors.com.au"
 MIRROR_DIR = Path("mirror")
 OUTPUTS = [Path("index.html"), Path("en-au/index.html")]
+HREFLANG = ["en-AU", "x-default"]   # each points to SOURCE
 GSC_TAG = '<meta name="google-site-verification" content="RKb416_rnBgrgI837ietY225mlvH1OF2wHtuC_0ONJo" />'
 UA = ("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 "
       "(KHTML, like Gecko) Chrome/130.0 Safari/537.36")
@@ -122,6 +124,13 @@ def clean(html):
     html = re.sub(r'<script[^>]*>(?:(?!</script>).)*?clarity\.ms(?:(?!</script>).)*?</script>', "", html, flags=re.S)
     html = re.sub(r'<link[^>]*clarity\.ms[^>]*>\s*', "", html)
     html = re.sub(r'<script[^>]*id="c-tracker-js(?:-before)?"[^>]*>.*?</script>\s*', "", html, flags=re.S)
+
+    # Replace the source's hreflang set with ours: en-AU and x-default -> the AU article.
+    html = re.sub(r'<!-- Hreflang Manager - Custom Tags -->.*?<!-- /Hreflang Manager -->\s*', "", html, flags=re.S)
+    html = re.sub(r'<link rel="alternate"[^>]*hreflang=[^>]*>\s*', "", html)
+    html = html.replace("<link rel=\"canonical\"",
+                        "".join(f'<link rel="alternate" hreflang="{lang}" href="{SOURCE}" />\n\t'
+                                for lang in HREFLANG) + "<link rel=\"canonical\"", 1)
 
     # Build timestamp that changes on every cache rebuild.
     html = re.sub(r'\s*<!-- This website is like a Rocket.*?-->', "", html, flags=re.S)
