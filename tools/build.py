@@ -1,7 +1,5 @@
 #!/usr/bin/env python3
-"""Generate the inner pages of the Aussie Casinos site (root + /en-au/ copies).
-
-The homepage (index.html, en-au/index.html) is copied from 10onlinecasinos.com by tools/mirror.py.
+"""Generate every page of the Aussie Casinos site (root + /en-au/ copies).
 
 Run from the repo root:  python3 tools/build.py
 Edit the copy and casino data here, never the generated index.html files.
@@ -18,11 +16,44 @@ BRAND = "Aussie Casinos"
 EMAIL = "contact@bigscissors.com.au"
 UPDATED_LONG = "19 November 2026"
 UPDATED_SHORT = "November 2026"
+GSC = '    <meta name="google-site-verification" content="RKb416_rnBgrgI837ietY225mlvH1OF2wHtuC_0ONJo">\n'
 AUTHOR = "Benjamin Taylor"
 AUTHOR_IMG = "Benjamin Taylor.png"
 
+# rank, name, logo, score, offer, wagering (None = not stated), best for, affiliate url
+CASINOS = [
+    (1, "Lucky 7", "Lucky7 logo.svg", 4.9, "AU$3,000 + 200 free spins", "35x", "All-round pick", "#"),
+    (2, "Lucky Vibe", "LuckyVibe Logo.svg", 4.8, "AU$5,000 + 300 free spins", "40x", "Biggest match package", "#"),
+    (3, "Goldenbet", "Goldenbet Logo.svg", 4.8, "AU$100 cash on each of your first 3 deposits", "None", "Wager-free cash", "#"),
+    (4, "Fortuneplay", "Fortune-Play-Logo.svg", 4.7, "Up to AU$5,000 + 300 free spins", "40x", "Live dealer tables", "#"),
+    (5, "Wild Tokyo", "Wild tokyo logo.svg", 4.7, "260% up to AU$4,900 + 620 free spins", "40x", "Free spin volume", "#"),
+    (6, "Rolling Slots", "Rollingslots logo.svg", 4.6, "310% up to AU$6,400 + 570 free spins", None, "Pokies fans", "#"),
+    (7, "Need for Spin", "Need for spin logo.svg", 4.6, "260% up to AU$4,100 + 530 free spins", None, "High-volatility pokies", "#"),
+    (8, "Bets.io", "Betsio logo.svg", 4.5, "225% up to AU$11,500 + 225 free spins", None, "Crypto players", "#"),
+    (9, "Aussie Play", "Aussie-Play-Online-Pokies-in-Australia-Logo.jpg", 4.5, "Up to AU$7,500 welcome package", None, "Aussie-themed lobby", "#"),
+    (10, "Pubs Casino", "Pubs-Casino-Logo.png", 4.4, "Up to 10% daily cashback", None, "Daily cashback", "#"),
+    (11, "Slots Gallery", "Slots-Gallery Logo.webp", 4.4, "Up to AU$9,750 + 225 free spins", None, "Curated pokies", "#"),
+    (12, "Winshark", "Winshark-Logo.svg", 4.3, "100% up to AU$400", "45x", "Casual players", "#"),
+    (13, "Boho Casino", "Boho-Casino-Logo.svg", 4.3, "100% up to AU$500 + 200 free spins", "40x", "Clean, simple lobby", "#"),
+    (14, "BetWhale", "Betwhale-Logo.svg", 4.2, "100% up to AU$1,000", "40x", "Steady all-rounder", "#"),
+    (15, "Zizobet", "zizobet logo.svg", 4.1, "100% up to AU$300", "50x", "Low minimum deposits", "#"),
+]
+CASINO = {c[1]: c for c in CASINOS}
+
+
 def img(name):
     return quote(name)
+
+
+def stars(r):
+    return (f'<span class="score"><span class="stars" style="--r:{r}" aria-hidden="true"></span>'
+            f'<span class="score__num">{r}<small>/5</small></span></span>')
+
+
+def cta(name, label="Visit site", cls="btn btn--coral btn--sm"):
+    url = CASINO[name][7]
+    return (f'<a href="{url}" class="{cls}" rel="nofollow sponsored noopener" '
+            f'data-casino="{name}">{label} <span class="arrow" aria-hidden="true">&rarr;</span></a>')
 
 
 # ---------------------------------------------------------------- shell
@@ -45,8 +76,8 @@ class Ctx:
         return self.h + slug
 
 
-NAV = [("", "Home"), ("about/", "How we test"), ("author-benjamin-taylor/", "Our reviewer"),
-       ("responsible-gambling/", "Responsible gambling"), ("contact/", "Contact")]
+NAV = [("rankings", "Rankings"), ("reviews", "Reviews"), ("bonuses", "Bonuses"),
+       ("payments", "Payments"), ("about/", "How we test"), ("faq", "FAQ")]
 
 
 def head(c, title, desc):
@@ -74,7 +105,7 @@ def head(c, title, desc):
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600&family=Sora:wght@600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="{c.a}css/style.css?v={ASSET_V}">
-</head>
+{GSC if c.is_home else ""}</head>
 <body>
     <a class="skip-link" href="#main">Skip to content</a>
 '''
@@ -89,7 +120,7 @@ def brand(c):
 def header(c, current=""):
     items = []
     for target, label in NAV:
-        href = c.page(target) if target else c.home()
+        href = c.page(target) if target.endswith("/") else c.home(target)
         cur = ' aria-current="page"' if target == current else ""
         items.append(f'<li><a href="{href}"{cur}>{label}</a></li>')
     return f'''
@@ -101,7 +132,7 @@ def header(c, current=""):
                     {"".join(items)}
                 </ul>
             </nav>
-            <a href="{c.home()}" class="btn btn--coral btn--sm site-header__cta">Top casinos</a>
+            <a href="{c.home("rankings")}" class="btn btn--coral btn--sm site-header__cta">Compare all 15</a>
             <button class="nav-toggle" type="button" aria-controls="site-nav" aria-expanded="false" aria-label="Open menu"><span></span></button>
         </div>
     </header>
@@ -123,9 +154,12 @@ def footer(c):
                     <span class="age-badge" aria-label="Adults only, 18 plus">18+</span>
                 </div>
                 <div>
-                    <h2>Casinos</h2>
+                    <h2>Compare</h2>
                     <ul>
-                        <li><a href="{c.home()}">Best online casinos</a></li>
+                        <li><a href="{c.home("rankings")}">All 15 casinos</a></li>
+                        <li><a href="{c.home("reviews")}">Top 5 reviews</a></li>
+                        <li><a href="{c.home("bonuses")}">Bonus guide</a></li>
+                        <li><a href="{c.home("payments")}">Payment methods</a></li>
                     </ul>
                 </div>
                 <div>
@@ -140,7 +174,7 @@ def footer(c):
                     <h2>Fine print</h2>
                     <ul>
                         <li><a href="{c.page("responsible-gambling/")}">Responsible gambling</a></li>
-                        <li><a href="{c.page("responsible-gambling/")}#law">Australian law</a></li>
+                        <li><a href="{c.home("legal")}">Australian law</a></li>
                         <li><a href="{c.page("privacy-policy/")}">Privacy policy</a></li>
                         <li><a href="{c.page("terms-of-service/")}">Terms of use</a></li>
                     </ul>
@@ -192,6 +226,435 @@ def page_hero(c, crumb, title, lead, extra=""):
         </div>
     </section>
 '''
+
+
+# ---------------------------------------------------------------- home
+
+def compare_table():
+    rows = []
+    for rank, name, logo, score, offer, wager, best, _ in CASINOS:
+        if wager is None:
+            w = '<span class="wager">Wagering: see T&amp;Cs</span>'
+        elif wager == "None":
+            w = '<span class="wager wager--good">No wagering</span>'
+        else:
+            good = " wager--good" if wager == "35x" else ""
+            w = f'<span class="wager{good}">{wager} wagering</span>'
+        top = ' class="is-top"' if rank <= 3 else ""
+        rows.append(f'''
+                        <tr{top}>
+                            <td data-col="rank"><span class="rank">{rank}</span></td>
+                            <td data-col="casino"><div class="casino-cell"><span class="logo-box"><img src="{{a}}images/{img(logo)}" alt="{name} logo" loading="lazy"></span><div><strong>{name}</strong><span class="tag">{best}</span></div></div></td>
+                            <td data-col="score">{stars(score)}</td>
+                            <td data-col="offer"><span class="offer">{offer}</span>{w}</td>
+                            <td data-col="cta">{cta(name)}</td>
+                        </tr>''')
+    return "".join(rows)
+
+
+REVIEWS = [
+    dict(
+        name="Lucky 7", title="Lucky 7", sub="Our overall number one",
+        banner="Lucky7 Casino.png",
+        body=[
+            "Lucky 7 is the casino we would point a friend to first. Sign-up and verification were quick, the lobby is easy to find your way around, and the game count is large without feeling like a junk drawer.",
+            "Speed is what settled it. Our test cashout by Bitcoin landed in 1 hour 47 minutes, and live chat answered in under half a minute each time we tried it. The welcome offer is generous, but the 35x wagering is what makes it usable: it's the lowest playthrough among the big match bonuses on our list.",
+        ],
+        facts=[("Welcome offer", "AU$3,000 + 200 free spins"), ("Wagering", "35x"),
+               ("Games", "4,000+ (Pragmatic Play, Hacksaw, Evolution)"),
+               ("Fastest test payout", "1 hr 47 min (Bitcoin)"),
+               ("Banking", "BTC, ETH, LTC, bank transfer, debit card")],
+        pros=["Quickest crypto cashout in our testing", "Lowest wagering among the large match bonuses",
+              "Casino and sportsbook under one login", "Responsive 24/7 live chat"],
+        cons=["Bonus still needs 35x playthrough before you can cash out",
+              "Browser only, with no dedicated app"],
+    ),
+    dict(
+        name="Lucky Vibe", title="Lucky Vibe", sub="Biggest welcome package in our top five",
+        banner="Lucky Vibe – Low-Limit 1-Hour PayID Crypto Cashout Casino.webp",
+        body=[
+            "Lucky Vibe's AU$5,000 plus 300 free spins is the headline grabber, so we checked whether the conditions hold up. Wagering is 40x, game weightings are published clearly, and stakes are capped at AU$5 a spin while a bonus is active.",
+            "On our test we deposited AU$200, cleared the playthrough on Pragmatic Play pokies and withdrew AU$780. Outside the welcome deal there are weekly reloads and leaderboard tournaments, and the live casino runs on Evolution.",
+        ],
+        facts=[("Welcome offer", "AU$5,000 + 300 free spins"), ("Wagering", "40x, AU$5 max bet"),
+               ("Games", "3,500+ (Pragmatic Play, NetEnt, Play'n GO)"),
+               ("Licence", "Curaçao"), ("Extras", "Weekly reloads, tournaments")],
+        pros=["Largest total welcome value in our top five", "Bonus rules are written in plain terms",
+              "Evolution live tables", "Provably fair hashes on in-house games"],
+        cons=["40x wagering is higher than our number one", "AU$5 stake cap while the bonus is running"],
+    ),
+    dict(
+        name="Goldenbet", title="Goldenbet", sub="Best if you hate wagering requirements",
+        banner="GoldenBet PayID supported online Casino.jpg",
+        body=[
+            "Goldenbet skips the usual match bonus. Instead, each of your first three deposits earns an AU$100 cash gift that carries no playthrough at all, so it can be withdrawn like any other balance.",
+            "We made three AU$100 deposits, received the gift each time and had a bank withdrawal in our account within 24 hours. It's a smaller headline number than the big packages, but it's money you can actually use. A sportsbook, crash games and a VIP cashback scheme round it out.",
+        ],
+        facts=[("Welcome offer", "AU$100 cash × first 3 deposits"), ("Wagering", "None"),
+               ("Fiat payout (tested)", "Under 24 hours"), ("Extras", "Sportsbook, crash games, VIP cashback")],
+        pros=["Bonus cash is withdrawable straight away", "Fast fiat withdrawals",
+              "Sportsbook alongside the casino", "Cashback for regular players"],
+        cons=["Needs three separate deposits to collect the full AU$300",
+              "Smaller total value than the large match deals"],
+    ),
+    dict(
+        name="Fortuneplay", title="Fortuneplay", sub="Best for live dealer games",
+        banner="Fortune Play Crypto Bonuses for Australian Players.webp",
+        body=[
+            "Fortuneplay is the pick for people who mainly play at live tables. The live section runs on Evolution, and in our sessions on Lightning Roulette, Infinite Blackjack and Crazy Time the streams were sharp, with no stutter.",
+            "Higher-limit tables are there for bigger bettors, and the VIP scheme pays up to 15% cashback. Our crypto withdrawal arrived inside an hour; bank transfers take one to two business days. The minimum withdrawal is AU$20.",
+        ],
+        facts=[("Welcome offer", "Up to AU$5,000 + 300 free spins"), ("Wagering", "40x"),
+               ("Games", "3,000+ pokies plus Evolution live"),
+               ("Crypto payout (tested)", "Under 1 hour"), ("Min. withdrawal", "AU$20")],
+        pros=["Strong Evolution live lobby, including high-limit tables", "VIP cashback up to 15%",
+              "Both crypto and fiat banking", "Low AU$20 minimum withdrawal"],
+        cons=["Bank transfers take 1–2 business days", "40x wagering on the welcome offer"],
+    ),
+    dict(
+        name="Wild Tokyo", title="Wild Tokyo", sub="Most free spins on the list",
+        banner="Wild Tokyo Online Casinos for Aussie Players.webp",
+        body=[
+            "620 free spins is the biggest spin count we found. They are split over your first four deposits, with 150 on the first, and winnings from the spins carry 40x wagering, which is about average.",
+            "We played our spins on Cash Connection Golden Book and finished with AU$340 after clearing the playthrough. The wider library is large, with a lot of bonus-buy pokies and networked jackpots, and the mobile site runs without an app.",
+        ],
+        facts=[("Welcome offer", "260% up to AU$4,900 + 620 free spins"), ("Wagering", "40x on spin winnings"),
+               ("Games", "4,500+ (Hacksaw, Pragmatic Play, Push Gaming)"),
+               ("Spin schedule", "Over first 4 deposits")],
+        pros=["Largest free spin bundle we've seen", "Deep bonus-buy and jackpot selection",
+              "Smooth mobile browser play"],
+        cons=["Spins are spread over four deposits", "40x wagering on spin winnings"],
+    ),
+]
+
+
+def review_html(r, rank):
+    name = r["name"]
+    score = CASINO[name][3]
+    facts = "".join(f"<div><dt>{k}</dt><dd>{v}</dd></div>" for k, v in r["facts"])
+    pros = "".join(f"<li>{p}</li>" for p in r["pros"])
+    cons = "".join(f"<li>{p}</li>" for p in r["cons"])
+    body = "".join(f"<p>{p}</p>" for p in r["body"])
+    slug = name.lower().replace(" ", "-").replace(".", "")
+    return f'''
+                <article class="review" id="review-{slug}">
+                    <header class="review__head">
+                        <span class="rank">{rank}</span>
+                        <div>
+                            <h3>{r["title"]}</h3>
+                            <p>{r["sub"]}</p>
+                        </div>
+                        {stars(score)}
+                    </header>
+                    <div class="review__body">
+                        <div class="review__text">
+                            <div class="review__banner"><img src="{{a}}images/{img(r["banner"])}" alt="{name} casino lobby" loading="lazy"></div>
+                            {body}
+                            <div class="proscons">
+                                <div class="pros"><h4>What we liked</h4><ul>{pros}</ul></div>
+                                <div class="cons"><h4>Watch out for</h4><ul>{cons}</ul></div>
+                            </div>
+                        </div>
+                        <dl class="facts">
+                            {facts}
+                            {cta(name, "Visit " + name, "btn btn--coral btn--block")}
+                            <p class="fine">18+. New customers. T&amp;Cs apply.</p>
+                        </dl>
+                    </div>
+                </article>'''
+
+
+FAQS = [
+    ("Is it legal to play at online casinos from Australia?",
+     "The Interactive Gambling Act 2001 makes it illegal for any operator, local or overseas, to offer online casino games such as pokies, roulette and blackjack to people in Australia. Playing is not an offence for you as an individual, but none of these sites hold an Australian licence, ACMA blocks many of them, and you have no Australian regulator to turn to if a withdrawal is refused."),
+    ("Which casino on this list is the best overall?",
+     "Lucky 7. It paid out fastest in our testing, has one of the biggest game libraries, and its welcome bonus has the lowest wagering among the large match offers."),
+    ("Which casino paid out the fastest?",
+     "Fortuneplay and Lucky 7 both returned our crypto withdrawals in under two hours. For bank withdrawals, Goldenbet was quickest at under 24 hours."),
+    ("Which bonus is the best value?",
+     "Goldenbet's AU$100 cash on each of your first three deposits, because it has no wagering attached. If you want the biggest headline number instead, Lucky Vibe's AU$5,000 plus 300 spins is the largest in our top five."),
+    ("What does 40x wagering actually mean?",
+     "You have to bet 40 times the bonus amount before bonus money and its winnings can be withdrawn. A AU$100 bonus at 40x means AU$4,000 in total bets. Our bonus section works through a full example."),
+    ("Do I pay tax on gambling winnings?",
+     "For recreational players, generally no. The ATO does not usually treat gambling winnings as income unless gambling is run as a business. If you're unsure about your situation, check with a tax adviser."),
+    ("Can I use BetStop to block these casinos?",
+     "No. BetStop only covers Australian-licensed online and phone wagering services. To block offshore casinos, use the account limits on each site, ask your bank to block gambling transactions, and install blocking software."),
+    ("How do I check whether a gambling site is licensed in Australia?",
+     "Search ACMA's register of licensed interactive wagering providers. If a site offering online pokies or table games is accepting Australians, it is not licensed here."),
+]
+
+
+def build_home(c):
+    a = c.a
+    lead = CASINO["Lucky 7"]
+    faqs = "".join(f"<details><summary>{q}</summary><p>{ans}</p></details>" for q, ans in FAQS)
+    reviews = "".join(review_html(r, i + 1) for i, r in enumerate(REVIEWS))
+    bonus_rows = "".join(
+        f"<tr><td>{n}</td><td>{CASINO[n][4]}</td><td>{'None' if CASINO[n][5] == 'None' else CASINO[n][5]}</td><td>{note}</td></tr>"
+        for n, note in [("Lucky 7", "Lowest playthrough of the big match bonuses"),
+                        ("Lucky Vibe", "AU$5 max bet while wagering"),
+                        ("Goldenbet", "Cash, withdrawable straight away"),
+                        ("Fortuneplay", "Pairs well with live dealer play"),
+                        ("Wild Tokyo", "Spins spread over 4 deposits")])
+
+    html = head(c,
+                "Best Online Casinos in Australia (2026): 15 Sites Compared | Aussie Casinos",
+                "Compare 15 online casinos that accept Australian players: welcome offers, wagering, payout speed and our scores side by side, plus straight answers on bonuses, banking and Australian law.")
+    html += header(c)
+    html += f'''
+    <main id="main">
+    <section class="hero">
+        <div class="wrap">
+            <div class="hero__grid">
+                <div>
+                    <span class="eyebrow">Updated {UPDATED_SHORT}</span>
+                    <h1>Best Online Casinos in Australia, Compared Side by Side</h1>
+                    <p class="hero__lead">Fifteen casinos that accept Australian players, scored on how fast they pay, how fair their bonuses really are and how well they run on a phone. Every number below comes from our own deposits and withdrawals.</p>
+                    <div class="hero__actions">
+                        <a href="#rankings" class="btn btn--coral">See the comparison table <span class="arrow" aria-hidden="true">&rarr;</span></a>
+                        <a href="#legal" class="btn btn--ghost">Read the legal notes</a>
+                    </div>
+                    <div class="byline-mini">
+                        <img src="{a}images/{img(AUTHOR_IMG)}" alt="" width="44" height="44">
+                        <span>Reviewed by <a href="{c.page("author-benjamin-taylor/")}">{AUTHOR}</a><br>Last checked {UPDATED_LONG}</span>
+                    </div>
+                </div>
+                <aside class="pick-card" aria-label="Editor's pick">
+                    <span class="pick-card__label">Editor's pick</span>
+                    <div class="pick-card__top">
+                        <span class="logo-box"><img src="{a}images/{img(lead[2])}" alt="Lucky 7 logo"></span>
+                        <div>
+                            <h2>Lucky 7</h2>
+                            {stars(lead[3])}
+                        </div>
+                    </div>
+                    <p class="pick-card__offer">{lead[4]}</p>
+                    <ul>
+                        <li>Crypto cashout in under 2 hours on our test</li>
+                        <li>35x wagering, the lowest of the big bonuses</li>
+                        <li>4,000+ games plus a sportsbook</li>
+                    </ul>
+                    {cta("Lucky 7", "Visit Lucky 7", "btn btn--coral btn--block")}
+                    <p class="fine">18+. New customers only. Full T&amp;Cs on the operator's site.</p>
+                </aside>
+            </div>
+            <div class="stat-strip">
+                <div class="stat"><span class="stat__num">50+</span><span class="stat__label">casinos assessed</span></div>
+                <div class="stat"><span class="stat__num">120+ hrs</span><span class="stat__label">of hands-on play</span></div>
+                <div class="stat"><span class="stat__num">15</span><span class="stat__label">made the shortlist</span></div>
+                <div class="stat"><span class="stat__num">Quarterly</span><span class="stat__label">re-checks</span></div>
+            </div>
+        </div>
+    </section>
+
+    <div class="wrap layout">
+            {toc([("rankings", "Comparison table"), ("method", "How we score"), ("reviews", "Top 5 reviews"),
+                  ("games", "Games worth trying"), ("bonuses", "Bonuses explained"), ("payments", "Payments"),
+                  ("legal", "Australian law"), ("safer", "Staying in control"), ("verdict", "Verdict"), ("faq", "FAQ")])}
+            <div class="content">
+
+            <section class="section" id="rankings">
+                <div class="section__head">
+                    <span class="eyebrow">The shortlist</span>
+                    <h2>All 15 casinos at a glance</h2>
+                    <p>Ranked by overall score. Wagering is shown where the operator publishes a single figure; otherwise check the offer's terms before you deposit.</p>
+                </div>
+                <div class="compare-wrap">
+                    <table class="compare">
+                        <caption class="sr-only">Comparison of 15 online casinos by score, welcome offer, wagering and strength</caption>
+                        <thead>
+                            <tr><th scope="col">#</th><th scope="col">Casino</th><th scope="col">Score</th><th scope="col">Welcome offer</th><th scope="col"><span class="sr-only">Link</span></th></tr>
+                        </thead>
+                        <tbody>{compare_table().replace("{a}", a)}
+                        </tbody>
+                    </table>
+                </div>
+                <p class="compare-note">Offers change often and are set by each operator. 18+ only. Always read the full terms on the casino's own site.</p>
+            </section>
+
+            <section class="section" id="method">
+                <div class="section__head">
+                    <span class="eyebrow">Method</span>
+                    <h2>How a casino earns its score</h2>
+                    <p>We open a real account, fund it with Australian dollars, play, and cash out. Six things decide the final number.</p>
+                </div>
+                <ol class="criteria">
+                    <li><h3>Getting paid</h3><p>We time real withdrawals by every method offered. Crypto under two hours and fiat under a day score top marks; anything past 48 hours loses points.</p></li>
+                    <li><h3>Bonus maths</h3><p>We work out what an offer is worth after wagering, stake caps, game weighting and cashout limits, rather than taking the headline figure.</p></li>
+                    <li><h3>Licence and security</h3><p>We confirm the offshore licence with the issuing body, check encryption and look for a history of complaints or unpaid winnings.</p></li>
+                    <li><h3>Game quality</h3><p>We look at who supplies the games, whether RTPs are published, and whether in-house titles can be verified as provably fair.</p></li>
+                    <li><h3>Phone performance</h3><p>Every site is played on iPhone and Android browsers, through the full deposit, play and withdrawal flow.</p></li>
+                    <li><h3>Player protection</h3><p>Deposit limits, time-outs and self-exclusion need to be easy to find and actually work. Sites without them don't make the list.</p></li>
+                </ol>
+            </section>
+
+            <section class="section" id="reviews">
+                <div class="section__head">
+                    <span class="eyebrow">Hands-on reviews</span>
+                    <h2>Our top five, tested in detail</h2>
+                    <p>What it was like to deposit, play and withdraw at each casino, and the catches worth knowing before you sign up.</p>
+                </div>
+                {reviews.replace("{a}", a)}
+            </section>
+
+            <section class="section" id="games">
+                <div class="section__head">
+                    <span class="eyebrow">Game lobby</span>
+                    <h2>Games worth trying</h2>
+                    <p>Titles you'll find at most casinos on our list, grouped by the type of player they suit.</p>
+                </div>
+                <div class="grid-3">
+                    <div class="card game-card"><span class="card__kicker">Pokies</span><h3>Everyday favourites</h3><p>Popular, well-tested pokies from big studios.</p><ul><li><strong>Big Bass Bonanza</strong>Pragmatic Play, fishing free-spin feature</li><li><strong>Sweet Bonanza</strong>Pragmatic Play, tumbling reels and multipliers</li><li><strong>Gates of Olympus</strong>Pragmatic Play, 6×5 scatter-pays grid</li></ul></div>
+                    <div class="card game-card"><span class="card__kicker">Jackpots</span><h3>Networked progressives</h3><p>A slice of every stake feeds a shared prize pool.</p><ul><li><strong>Mega Moolah</strong>Games Global, four-tier jackpot wheel</li><li><strong>Divine Fortune</strong>NetEnt, three progressive tiers</li><li><strong>Jackpot Giant</strong>Playtech, straightforward with a big top prize</li></ul></div>
+                    <div class="card game-card"><span class="card__kicker">Live dealer</span><h3>Real tables, streamed</h3><p>Human dealers in a studio, played in real time.</p><ul><li><strong>Lightning Roulette</strong>Evolution, random multipliers on straight-ups</li><li><strong>Crazy Time</strong>Evolution, money-wheel game show</li><li><strong>Infinite Blackjack</strong>Evolution, unlimited seats per table</li></ul></div>
+                    <div class="card game-card"><span class="card__kicker">Crash</span><h3>Cash out before it falls</h3><p>Short rounds where the multiplier climbs until it crashes.</p><ul><li><strong>Aviator</strong>Spribe, the best-known crash title</li><li><strong>JetX</strong>SmartSoft, multiplayer crash</li><li><strong>Space XY</strong>BGaming, curve-based multiplier</li></ul></div>
+                    <div class="card game-card"><span class="card__kicker">Table games</span><h3>Digital classics</h3><p>Lower house edges if you play them well.</p><ul><li><strong>European Roulette</strong>Single zero, better odds than American</li><li><strong>Blackjack</strong>Look for tables paying 3:2 on naturals</li><li><strong>Casino Hold'em</strong>Poker played against the dealer</li></ul></div>
+                    <div class="card game-card"><span class="card__kicker">Bonus buys</span><h3>Straight to the feature</h3><p>Pay up front to trigger the bonus round. High risk.</p><ul><li><strong>Wanted Dead or a Wild</strong>Hacksaw Gaming, western-themed</li><li><strong>Mental</strong>Nolimit City, very high volatility</li><li><strong>San Quentin xWays</strong>Nolimit City, big swings</li></ul></div>
+                </div>
+            </section>
+
+            <section class="section" id="bonuses">
+                <div class="section__head">
+                    <span class="eyebrow">Bonus guide</span>
+                    <h2>Casino bonuses, explained properly</h2>
+                    <p>The headline figure is the least useful part of an offer. Here's what the common types mean and how to tell what one is worth.</p>
+                </div>
+                <dl class="defs">
+                    <div><dt>Deposit match</dt><dd>The casino adds a percentage of your deposit as bonus funds. 100% up to AU$1,000 turns a AU$500 deposit into AU$1,000 to play with.</dd></div>
+                    <div><dt>Free spins</dt><dd>Spins on chosen pokies. Winnings usually arrive as bonus money with their own wagering requirement.</dd></div>
+                    <div><dt>Cash gift / no-wager bonus</dt><dd>Bonus credit you can withdraw without a playthrough. Rare, and usually smaller, but worth more than it looks.</dd></div>
+                    <div><dt>Cashback</dt><dd>A share of your net losses returned over a set period, either as cash or as bonus money.</dd></div>
+                    <div><dt>Reloads</dt><dd>Smaller match offers for existing players, often on weekends or tied to a specific day.</dd></div>
+                    <div><dt>VIP schemes</dt><dd>Points earned on every bet, traded for cashback, quicker withdrawals or a personal account manager.</dd></div>
+                </dl>
+
+                <div class="calc">
+                    <h3>Worked example: what wagering really costs</h3>
+                    <p>Say you deposit AU$200 and receive a AU$200 match bonus. This is the total you would need to bet before the bonus can be withdrawn:</p>
+                    <div class="calc__rows">
+                        <div class="calc__row is-good"><span>No wagering (Goldenbet-style)</span><b>AU$0</b></div>
+                        <div class="calc__row"><span>35x bonus (Lucky 7)</span><b>AU$7,000</b></div>
+                        <div class="calc__row"><span>40x bonus (Lucky Vibe, Wild Tokyo)</span><b>AU$8,000</b></div>
+                    </div>
+                    <p>If the requirement applies to deposit <em>plus</em> bonus, those totals double. Always check which one the terms use.</p>
+                </div>
+
+                <h3>Five things to check before you opt in</h3>
+                <ul class="checklist">
+                    <li><strong>Playthrough.</strong> Around 35x is reasonable. Above 50x, the bonus is rarely worth taking.</li>
+                    <li><strong>Game weighting.</strong> Pokies usually count 100% towards wagering; live and table games often count 5–20%, or nothing at all.</li>
+                    <li><strong>Stake cap.</strong> Most offers limit bets to around AU$5–10 while a bonus is active. Going over can void your winnings.</li>
+                    <li><strong>Cashout limit.</strong> Some bonuses cap what you can withdraw from bonus winnings.</li>
+                    <li><strong>Time limit.</strong> Expect 7 to 30 days to finish wagering before the bonus disappears.</li>
+                </ul>
+
+                <h3>Top five offers side by side</h3>
+                <div class="table-scroll">
+                    <table class="data">
+                        <thead><tr><th scope="col">Casino</th><th scope="col">Offer</th><th scope="col">Wagering</th><th scope="col">Our note</th></tr></thead>
+                        <tbody>{bonus_rows}</tbody>
+                    </table>
+                </div>
+            </section>
+
+            <section class="section" id="payments">
+                <div class="section__head">
+                    <span class="eyebrow">Banking</span>
+                    <h2>Deposits and withdrawals</h2>
+                    <p>How long each method took in our testing, and what to watch for.</p>
+                </div>
+                <div class="table-scroll">
+                    <table class="data">
+                        <thead><tr><th scope="col">Method</th><th scope="col">Deposit</th><th scope="col">Withdrawal</th><th scope="col">Good to know</th></tr></thead>
+                        <tbody>
+                            <tr><td>Crypto (BTC, ETH, LTC, USDT)</td><td>Instant</td><td>Usually 1–2 hours</td><td>Fastest option we tested. Network fees apply, and coin prices move.</td></tr>
+                            <tr><td>Visa / Mastercard debit</td><td>Instant</td><td>1–3 business days</td><td>Some Australian banks decline gambling payments, so keep a second method ready.</td></tr>
+                            <tr><td>E-wallets (Skrill, Neteller, MuchBetter)</td><td>Instant</td><td>Within 24 hours</td><td>Only offered at some sites. Check fees for moving money back to your bank.</td></tr>
+                            <tr><td>PayID / bank transfer</td><td>Minutes to 1 day</td><td>1–5 business days</td><td>Higher minimum withdrawals are common, around AU$50–100.</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div class="callout callout--teal">
+                    <h4>Before your first withdrawal</h4>
+                    <p>Almost every casino asks for ID and proof of address before it releases a payout. Upload them early so your first cashout isn't held up. Check the per-transaction limits as well: minimums are often AU$10–20, and maximums can be AU$5,000–10,000.</p>
+                </div>
+            </section>
+
+            <section class="section" id="legal">
+                <div class="section__head">
+                    <span class="eyebrow">The law</span>
+                    <h2>What Australian law says about online casinos</h2>
+                </div>
+                <p>The <strong>Interactive Gambling Act 2001</strong> bans operators from offering real-money online casino games, including pokies, roulette, blackjack and similar games, to people in Australia. That applies to companies based overseas too. Only online sports and race wagering can be licensed here.</p>
+                <p>The Act targets operators, not players, so using an offshore casino is not a crime for you. It does leave you without the protections that come with a local licence:</p>
+                <ul>
+                    <li>No Australian regulator or ombudsman can step in if a casino refuses to pay.</li>
+                    <li>ACMA regularly blocks offshore casino sites, so a site you use today may become unreachable.</li>
+                    <li>BetStop, the national self-exclusion register, does not cover these sites.</li>
+                    <li>Gambling winnings are generally not taxed for recreational players.</li>
+                </ul>
+                <div class="callout callout--coral">
+                    <h4>Our position</h4>
+                    <p>All the casinos on this page are offshore and hold overseas licences such as Curaçao. None is licensed in Australia, and listing one here does not make it legal or risk-free. You can check whether a provider is licensed on <a href="https://www.acma.gov.au/check-if-gambling-operator-legal" rel="noopener">ACMA's register</a>.</p>
+                </div>
+            </section>
+
+            <section class="section" id="safer">
+                <div class="section__head">
+                    <span class="eyebrow">Safer play</span>
+                    <h2>Staying in control</h2>
+                </div>
+                <div class="grid-2">
+                    <div class="card"><h3>Budget first</h3><p>Pick a spending limit before you log in and treat it as money already spent on entertainment.</p></div>
+                    <div class="card"><h3>Use the limits</h3><p>Set deposit, loss and session limits in your account settings on day one, not after a bad night.</p></div>
+                    <div class="card"><h3>Don't chase</h3><p>Upping your bets to win back losses is the quickest way to lose control. Stop when the budget is gone.</p></div>
+                    <div class="card"><h3>Block it at the bank</h3><p>Most Australian banks can block gambling transactions on your cards. Ask yours if you need a hard stop.</p></div>
+                </div>
+                <div class="helplines">
+                    <a class="helpline" href="tel:1800858858"><strong>National Gambling Helpline</strong><span class="num">1800 858 858</span>Free, confidential, 24/7</a>
+                    <a class="helpline" href="https://www.gamblinghelponline.org.au/" rel="noopener"><strong>Gambling Help Online</strong><span class="num">Chat &amp; email</span>Counselling at any hour</a>
+                    <a class="helpline" href="tel:131114"><strong>Lifeline</strong><span class="num">13 11 14</span>24-hour crisis support</a>
+                    <a class="helpline" href="https://gaaustralia.org.au/" rel="noopener"><strong>Gamblers Anonymous</strong><span class="num">Meetings</span>Peer support groups</a>
+                </div>
+                <p style="margin-top:20px"><a href="{c.page("responsible-gambling/")}">More on warning signs, self-exclusion and support &rarr;</a></p>
+            </section>
+
+            <section class="section" id="verdict">
+                <div class="verdict">
+                    <div>
+                        <span class="eyebrow">Verdict</span>
+                        <h2>Lucky 7 is our pick for 2026</h2>
+                        <p>Across more than 50 casinos and 120+ hours of play, Lucky 7 did the most things well:</p>
+                        <ul>
+                            <li>Quickest crypto payout we recorded</li>
+                            <li>4,000+ games from top studios</li>
+                            <li>35x wagering, the lowest of the big welcome deals</li>
+                            <li>Smooth on both iPhone and Android</li>
+                        </ul>
+                        <p>Want something different? Goldenbet suits people who dislike wagering, Wild Tokyo suits spin hunters, and Fortuneplay suits live table regulars.</p>
+                    </div>
+                    <div class="verdict__cta">
+                        <span class="logo-box"><img src="{a}images/{img(lead[2])}" alt="Lucky 7 logo"></span>
+                        {cta("Lucky 7", "Visit Lucky 7", "btn btn--coral btn--block")}
+                        <p class="fine">18+. T&amp;Cs apply. Gamble responsibly.</p>
+                    </div>
+                </div>
+            </section>
+
+            <section class="section" id="faq">
+                <div class="section__head">
+                    <span class="eyebrow">FAQ</span>
+                    <h2>Common questions</h2>
+                </div>
+                <div class="faq">{faqs}</div>
+            </section>
+
+            </div>
+    </div>
+    </main>
+'''
+    html += footer(c)
+    return html
 
 
 # ---------------------------------------------------------------- inner pages
@@ -247,7 +710,7 @@ def build_about(c):
 
             <section class="section" id="safety">
                 <h2>Player safety</h2>
-                <p>A casino has to offer working deposit limits, time-outs and self-exclusion to be listed. We also say plainly that none of these sites is licensed in Australia. Our <a href="{c.page("responsible-gambling/")}#law">responsible gambling page</a> explains what that means for you.</p>
+                <p>A casino has to offer working deposit limits, time-outs and self-exclusion to be listed. We also say plainly that none of these sites is licensed in Australia. Our <a href="{c.home("legal")}">legal notes</a> explain what that means for you.</p>
                 <div class="callout callout--teal">
                     <h4>Need support?</h4>
                     <p>Call the National Gambling Helpline on <strong>1800 858 858</strong> or visit <a href="https://www.gamblinghelponline.org.au/" rel="noopener">Gambling Help Online</a>. For more options see our <a href="{c.page("responsible-gambling/")}">responsible gambling page</a>.</p>
@@ -446,7 +909,7 @@ def build_terms(c):
             <p>Everything here is general information, not legal, financial or tax advice. We work to keep it accurate, but offers, terms, licences and availability change, often without notice. Check the details on the operator's own site before you sign up.</p>
 
             <h2>We're not a casino</h2>
-            <p>We don't run gambling services, take bets or process payments. Anything you do at a third-party site, including registering, depositing or withdrawing, is between you and that operator under their terms. Our responsible gambling page explains the position of these sites under Australian law.</p>
+            <p>We don't run gambling services, take bets or process payments. Anything you do at a third-party site, including registering, depositing or withdrawing, is between you and that operator under their terms. Our legal notes explain the position of these sites under Australian law.</p>
 
             <h2>Affiliate links</h2>
             <p>Some outbound links earn us a commission. You pay nothing extra, and commissions don't decide our rankings.</p>
@@ -592,6 +1055,7 @@ def build_rg(c):
 
 
 PAGES = {
+    "": build_home,
     "about/": build_about,
     "author-benjamin-taylor/": build_author,
     "contact/": build_contact,
